@@ -15,10 +15,11 @@ import { useEffect, useState } from 'react'
 import { DeleteUserModal } from '@/components/DeleteUserModal'
 
 const registerFormSchema = z.object({
-  ip: z.string().min(1, { message: 'Informe o IP' }),
-  path: z.string().min(1, { message: 'Informe o caminho' }),
+  ip: z.string(),
+  path: z.string(),
   user_firebird: z.string(),
   firebird_password: z.string(),
+  aws_folder: z.string(),
   name: z.string().min(1, { message: 'Informe a razão social' }),
   cnpj: z.string().refine((value) => isValidCNPJ(value), {
     message: 'Informe um CNPJ válido',
@@ -49,6 +50,11 @@ type RegisterFormData = z.infer<typeof registerFormSchema>
 
 export default function CreateUser() {
   const [modalOpen, setModalOpen] = useState(false)
+  const [isChecked, setIsChecked] = useState(false)
+
+  const handleCheckboxChange = () => {
+    setIsChecked(!isChecked)
+  }
 
   const token = Cookies.get('auth_token')
   const router = useRouter()
@@ -74,7 +80,8 @@ export default function CreateUser() {
     password,
     path,
     firebird_password,
-    user_firebird
+    user_firebird,
+    aws_folder,
   }: RegisterFormData) {
     if (password !== confirmPassword) {
       toast.error('As senhas não conferem')
@@ -86,12 +93,14 @@ export default function CreateUser() {
         email,
         password,
         confirm_password: confirmPassword,
-        database_path: path,
-        database_ip: ip,
+        database_path: path || '',
+        database_ip: ip || '',
         name,
         cnpj,
-        user_firebird,
-        firebird_password
+        user_firebird: user_firebird || '',
+        firebird_password: firebird_password || '',
+        aws_folder: aws_folder || '',
+        use_backup: isChecked,
       })
 
       toast.success('Usuário criado com sucesso')
@@ -102,7 +111,16 @@ export default function CreateUser() {
     }
   }
 
-  async function onUpdate({ cnpj, email, ip, name, path,firebird_password, user_firebird }: RegisterFormData) {
+  async function onUpdate({
+    cnpj,
+    email,
+    ip,
+    name,
+    path,
+    firebird_password,
+    user_firebird,
+    aws_folder,
+  }: RegisterFormData) {
     try {
       await api.post('/update', {
         email,
@@ -112,7 +130,9 @@ export default function CreateUser() {
         cnpj,
         id: userId,
         user_firebird,
-        firebird_password
+        firebird_password,
+        aws_folder,
+        use_backup: isChecked,
       })
 
       toast.success('Usuário atualizado com sucesso')
@@ -149,7 +169,9 @@ export default function CreateUser() {
             database_ip: databaseIp,
             cnpj,
             firebird_user,
-            firebird_password
+            firebird_password,
+            aws_folder,
+            use_backup,
           } = response.data
 
           setValue('ip', databaseIp)
@@ -161,6 +183,8 @@ export default function CreateUser() {
           setValue('confirmPassword', 'QWER1234@')
           setValue('user_firebird', firebird_user)
           setValue('firebird_password', firebird_password)
+          setValue('aws_folder', aws_folder)
+          setIsChecked(use_backup)
         } catch {
           toast.error('Erro ao buscar usuário')
         }
@@ -193,7 +217,7 @@ export default function CreateUser() {
   return (
     <>
       <Toaster />
-      <div className="isolate bg-white px-6 py-20 sm:py-28 lg:px-8">
+      <div className="isolate bg-white px-6 py-20 sm:py-28 lg:px-8 h-screen">
         <div
           className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem]"
           aria-hidden="true"
@@ -220,79 +244,140 @@ export default function CreateUser() {
           className="mx-auto mt-16 max-w-xl sm:mt-20"
           onSubmit={handleSubmit(!userId ? onSubmit : onUpdate)}
         >
-          <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="first-name"
-                className="block text-sm font-semibold leading-6 text-gray-900"
-              >
-                IP Externo
-              </label>
-              <div className="mt-2.5">
-                <input
-                  type="text"
-                  id="first-name"
-                  placeholder="000.00.00.000"
-                  autoComplete="given-name"
-                  className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
-                  {...register('ip')}
-                />
+          <label className="autoSaverSwitch relative inline-flex cursor-pointer select-none items-center">
+            <input
+              type="checkbox"
+              name="autoSaver"
+              className="sr-only"
+              checked={isChecked}
+              onChange={handleCheckboxChange}
+            />
+            <span
+              className={`slider mr-3 flex h-[26px] w-[50px] items-center rounded-full p-1 duration-200 ${
+                isChecked ? 'bg-blue-500' : 'bg-[#CCCCCE]'
+              }`}
+            >
+              <span
+                className={`dot h-[18px] w-[18px] rounded-full bg-white duration-200 ${
+                  isChecked ? 'translate-x-6' : ''
+                }`}
+              ></span>
+            </span>
+            <span className="label flex items-center text-sm font-medium text-black">
+              <span className="pl-1">
+                {' '}
+                {isChecked ? 'Utiliza Backup' : 'Utiliza IP externo'}{' '}
+              </span>
+            </span>
+          </label>
+          <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 mt-4">
+            {!isChecked && (
+              <div>
+                <label
+                  htmlFor="first-name"
+                  className="block text-sm font-semibold leading-6 text-gray-900"
+                >
+                  IP Externo
+                </label>
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    id="first-name"
+                    placeholder="000.00.00.000"
+                    autoComplete="given-name"
+                    className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+                    {...register('ip')}
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <label
-                htmlFor="last-name"
-                className="block text-sm font-semibold leading-6 text-gray-900"
-              >
-                Caminho
-              </label>
-              <div className="mt-2.5">
-                <input
-                  type="text"
-                  id="last-name"
-                  placeholder="C:/ADMERP/DADOS.FDB"
-                  autoComplete="family-name"
-                  className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
-                  {...register('path')}
-                />
+            )}
+            {!isChecked && (
+              <div>
+                <label
+                  htmlFor="last-name"
+                  className="block text-sm font-semibold leading-6 text-gray-900"
+                >
+                  Caminho
+                </label>
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    id="last-name"
+                    placeholder="C:/ADMERP/DADOS.FDB"
+                    autoComplete="family-name"
+                    className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+                    {...register('path')}
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <label
-                htmlFor="first-name"
-                className="block text-sm font-semibold leading-6 text-gray-900"
-              >
-                Usuário firebird <span className='text-gray-400 text-xs ml-1'>padrão (SYSDBA)</span>
-              </label>
-              <div className="mt-2.5">
-                <input
-                  type="text"
-                  id="first-name"
-                  placeholder="000.00.00.000"
-                  autoComplete="given-name"
-                  className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
-                  {...register('user_firebird')}
-                />
+            )}
+            {!isChecked && (
+              <div>
+                <label
+                  htmlFor="first-name"
+                  className="block text-sm font-semibold leading-6 text-gray-900"
+                >
+                  Usuário firebird{' '}
+                  <span className="text-gray-400 text-xs ml-1">
+                    padrão (SYSDBA)
+                  </span>
+                </label>
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    id="first-name"
+                    placeholder="SYSDBA"
+                    autoComplete="given-name"
+                    className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+                    {...register('user_firebird')}
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <label
-                htmlFor="last-name"
-                className="block text-sm font-semibold leading-6 text-gray-900"
-              >
-                Senha firebird <span className='text-gray-400 text-xs ml-1'> padrão (masterkey)</span>
-              </label>
-              <div className="mt-2.5">
-                <input
-                  type="text"
-                  id="last-name"
-                  placeholder="C:/ADMERP/DADOS.FDB"
-                  autoComplete="family-name"
-                  className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
-                  {...register('firebird_password')}
-                />
+            )}
+            {!isChecked && (
+              <div>
+                <label
+                  htmlFor="last-name"
+                  className="block text-sm font-semibold leading-6 text-gray-900"
+                >
+                  Senha firebird{' '}
+                  <span className="text-gray-400 text-xs ml-1">
+                    {' '}
+                    padrão (masterkey)
+                  </span>
+                </label>
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    id="last-name"
+                    placeholder="masterkey"
+                    autoComplete="family-name"
+                    className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+                    {...register('firebird_password')}
+                  />
+                </div>
               </div>
-            </div>
+            )}
+            {isChecked && (
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="company"
+                  className="block text-sm font-semibold leading-6 text-gray-900"
+                >
+                  Pasta AWS S3
+                </label>
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    id="aws_folder"
+                    placeholder="ADMINFO-00.000.000/0000-00"
+                    autoComplete="organization"
+                    className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
+                    {...register('aws_folder')}
+                  />
+                </div>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <label
                 htmlFor="company"

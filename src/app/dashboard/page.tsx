@@ -16,7 +16,7 @@ export default async function Dashboard() {
   })) as { data: number }
 
   return (
-    <main className="h-screen w-screen flex">
+    <main className="h-screen w-screen flex bg-white">
       <Sidebar />
       <section className="flex-1 p-16">
         <div className=" flex w-full justify-between items-center mb-16">
