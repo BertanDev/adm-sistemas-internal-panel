@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // experimental: {
-  //   missingSuspenseWithCSRBailout: false,
-  // },
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
