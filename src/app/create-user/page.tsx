@@ -90,7 +90,7 @@ export default function CreateUser() {
     }
 
     try {
-      await api.post('/register', {
+      const response = await api.post('/register', {
         email,
         password,
         confirm_password: confirmPassword,
@@ -103,6 +103,8 @@ export default function CreateUser() {
         aws_folder: aws_folder || '',
         use_backup: isChecked,
       })
+
+      console.log(response.data)
 
       toast.success('Usuário criado com sucesso')
 
@@ -192,6 +194,8 @@ export default function CreateUser() {
       }
 
       getUser()
+    } else {
+      setValue('aws_folder', '-')
     }
   }, [setValue, token, userId])
 
@@ -315,7 +319,7 @@ export default function CreateUser() {
             {!isChecked && (
               <div>
                 <label
-                  htmlFor="first-name"
+                  htmlFor="firebird-user"
                   className="block text-sm font-semibold leading-6 text-gray-900"
                 >
                   Usuário firebird{' '}
@@ -326,7 +330,7 @@ export default function CreateUser() {
                 <div className="mt-2.5">
                   <input
                     type="text"
-                    id="first-name"
+                    id="firebird" 
                     placeholder="SYSDBA"
                     autoComplete="given-name"
                     className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
@@ -338,7 +342,7 @@ export default function CreateUser() {
             {!isChecked && (
               <div>
                 <label
-                  htmlFor="last-name"
+                  htmlFor="firebird_password"
                   className="block text-sm font-semibold leading-6 text-gray-900"
                 >
                   Senha firebird{' '}
@@ -350,7 +354,7 @@ export default function CreateUser() {
                 <div className="mt-2.5">
                   <input
                     type="text"
-                    id="last-name"
+                    id="firebird_password"
                     placeholder="masterkey"
                     autoComplete="family-name"
                     className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 sm:text-sm sm:leading-6"
